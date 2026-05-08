@@ -1,0 +1,28 @@
+/.phpunit.cache
+/node_modules
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+/.fleet
+/.idea
+/.vscode
+/bootstrap/cache
+# Ignore everything inside assets, but not the folder itself
+/public/assets/*
+
+# Re-allow the common folder
+!/public/assets/common/
+
+# Re-allow everything inside common
+!/public/assets/common/**

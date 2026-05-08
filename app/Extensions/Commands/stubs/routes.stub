@@ -1,0 +1,7 @@
+<?php
+
+use Illuminate\Support\Facades\Route;
+
+Route::get('/{{extension_lower_name}}', function () {
+    return 'Hello from the {{extension_name}} extension!';
+});

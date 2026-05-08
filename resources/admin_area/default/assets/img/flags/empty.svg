@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="20" height="15">
+    <circle cx="50" cy="50" r="48" fill="#f3f4f6" stroke="#d1d5db" stroke-width="2"/>
+    <path d="M30 50c5-10 20-20 40-20 0 10 10 30 20 40-10 5-40 10-60-10-10-15 0-30 0-30z" fill="#9ca3af" />
+    <text x="50" y="75" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" fill="#6b7280">Country</text>
+</svg>

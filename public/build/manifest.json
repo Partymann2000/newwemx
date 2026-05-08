@@ -1,0 +1,16 @@
+{
+  "resources/client_area/default/assets/css/app.css": {
+    "file": "assets/app-gHgi1tS2.css",
+    "src": "resources/client_area/default/assets/css/app.css",
+    "isEntry": true
+  },
+  "resources/client_area/default/assets/js/app.js": {
+    "file": "assets/app-B9syOhCW.js",
+    "name": "app",
+    "src": "resources/client_area/default/assets/js/app.js",
+    "isEntry": true,
+    "css": [
+      "assets/app-DhA00dbO.css"
+    ]
+  }
+}

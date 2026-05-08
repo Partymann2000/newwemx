@@ -1,0 +1,19 @@
+# Ignore the node_modules directory
+node_modules
+
+# Ignore directories with logs and cache
+storage/logs
+storage/framework/cache
+storage/framework/sessions
+storage/framework/views
+
+# Ignore the vendor directory (PHP dependencies)
+vendor
+
+# Ignore Git
+.git
+
+# Ignore other unnecessary files
+.DS_Store
+Thumbs.db
+*.md
