@@ -1,0 +1,92 @@
+name: Build and Attach Release ZIP
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build-release:
+    name: Build WemX Release
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, bcmath, ctype, fileinfo, json, openssl, pdo, tokenizer, xml
+          coverage: none
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build CSS and frontend assets
+        run: npm run build
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+      - name: Prepare Laravel release optimizations
+        run: |
+          php artisan package:discover --ansi || true
+          php artisan config:clear
+          php artisan route:clear
+          php artisan view:clear
+          php artisan event:clear || true
+
+      - name: Prepare release folder
+        run: |
+          mkdir -p build/wemx
+
+          rsync -av \
+            --exclude=".git" \
+            --exclude=".github" \
+            --exclude=".cursor" \
+            --exclude="node_modules" \
+            --exclude="tests" \
+            --exclude="storage/logs/*" \
+            --exclude="storage/framework/cache/*" \
+            --exclude="storage/framework/sessions/*" \
+            --exclude="storage/framework/views/*" \
+            --exclude="database/database.sqlite" \
+            --exclude=".env" \
+            --exclude="phpunit.xml" \
+            --exclude="AGENTS.md" \
+            --exclude="boost.json" \
+            --exclude="build" \
+            ./ build/wemx/
+
+      - name: Write app version to .env.example
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+
+          if grep -q "^APP_VERSION=" .env.example; then
+            sed -i "s/^APP_VERSION=.*/APP_VERSION=\"${VERSION}\"/" .env.example
+          else
+            echo "APP_VERSION=\"${VERSION}\"" >> .env.example
+          fi
+
+      - name: Create ZIP archive
+        run: |
+          cd build
+          zip -r WemX-${{ github.event.release.tag_name }}.zip wemx
+
+      - name: Upload ZIP to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/WemX-${{ github.event.release.tag_name }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
