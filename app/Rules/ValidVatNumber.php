@@ -8,7 +8,8 @@ use SoapFault;
 
 class ValidVatNumber implements Rule
 {
-    protected string $countryCode;
+    protected ?string $countryCode;
+
     protected string $error = '';
 
     // List of VIES-valid EU country codes
@@ -18,17 +19,17 @@ class ValidVatNumber implements Rule
         'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE',
     ];
 
-    public function __construct(string $countryCode)
+    public function __construct(?string $countryCode = null)
     {
-        $this->countryCode = strtoupper($countryCode);
+        $this->countryCode = $countryCode ? strtoupper($countryCode) : null;
     }
 
     public function passes($attribute, $value)
     {
         $vat = strtoupper(preg_replace('/\s+/', '', $value)); // sanitize input
 
-        // If country is not in VIES, skip validation
-        if (!in_array($this->countryCode, $this->viesCountries)) {
+        // If country code is missing or not in VIES, skip validation
+        if ($this->countryCode === null || ! in_array($this->countryCode, $this->viesCountries)) {
             return true;
         }
 
@@ -52,6 +53,7 @@ class ValidVatNumber implements Rule
             return $response->valid;
         } catch (SoapFault $e) {
             $this->error = 'VIES service is currently unavailable.';
+
             return false;
         }
     }
