@@ -764,10 +764,6 @@
                             <p class="text-secondary">
                                 Your application is ready to use! You can now log in with the administrator account you created. If you have any questions or need assistance, please refer to our documentation or contact support.
                             </p>
-                            <p class="text-secondary">
-                                Not sure where to start? Watch our quick start video to get familiar with the application and its features.
-                            </p>
-                            <iframe width="560" height="315" src="https://www.youtube.com/embed/KaLxCiilHns?si=eLOIjNrcIwll-Q2a" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
                         </div>
                     </div>
                 </div>
