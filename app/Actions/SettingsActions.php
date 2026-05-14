@@ -133,6 +133,7 @@ class SettingsActions extends Action
         $validatedData = Validator::make($input, [
             'enable_registrations' => ['required', 'boolean'],
             'require_address' => ['required', 'boolean'],
+            'block_reserved_usernames' => ['required', 'boolean'],
         ])->validate();
 
         Setting::store(self::omitNullValues($validatedData));
