@@ -9,7 +9,7 @@ use App\Models\Package;
 use App\Models\PackagePrice;
 use Livewire\Attributes\Url;
 use Illuminate\Validation\ValidationException;
-use Throwable;
+use Exception;
 
 new class extends Component {
     #[Url]
@@ -50,7 +50,7 @@ new class extends Component {
                     $this->addError($field, $message);
                 }
             }
-        } catch (Throwable $e) {
+        } catch (Exception $e) {
             $this->addError('order', $e->getMessage() ?: 'Unable to create order.');
         }
     }
