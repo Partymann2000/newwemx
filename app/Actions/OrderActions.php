@@ -31,7 +31,7 @@ class OrderActions extends Action
         $validatedData = Validator::make($input, [
             'user_id' => ['required', 'exists:users,id'],
             'package_price_id' => ['required', 'exists:package_prices,id'],
-            'due_date' => ['sometimes', 'date'],
+            'due_date' => ['nullable', 'date'],
             'create_server_instance' => ['required', 'boolean'],
             'email_order_confirmation' => ['required', 'boolean'],
             'config_options' => ['sometimes', 'array'],
@@ -68,7 +68,7 @@ class OrderActions extends Action
             'upgrade_fee' => $price->upgrade_fee,
             'period_in_days' => $price->period_in_days,
             'last_renewed_at' => now(),
-            'due_date' => $validatedData['due_date'],
+            'due_date' => $validatedData['due_date'] ?? null,
         ];
 
         $order = Order::create($orderData);

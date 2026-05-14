@@ -22,7 +22,7 @@
                     </li>
                     <li class="list-inline-item">
                         <a href="#" class="link-secondary" rel="noopener">
-                            v{{ config('app.version') }}
+                            {{ config('app.version') }}
                         </a>
                     </li>
                 </ul>

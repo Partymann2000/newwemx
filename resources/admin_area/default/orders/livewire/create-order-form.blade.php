@@ -9,7 +9,6 @@ use App\Models\Package;
 use App\Models\PackagePrice;
 use Livewire\Attributes\Url;
 use Illuminate\Validation\ValidationException;
-use Exception;
 
 new class extends Component {
     #[Url]
@@ -37,7 +36,7 @@ new class extends Component {
             $order = Order::actions()->createOrderAsAdmin([
                 'user_id' => $this->user_id,
                 'package_price_id' => $this->package_price_id,
-                'due_date' => $this->due_date,
+                'due_date' => filled($this->due_date) ? $this->due_date : null,
                 'create_server_instance' => $this->create_server_instance,
                 'email_order_confirmation' => $this->email_order_confirmation,
                 'config_options' => $this->config_options,
@@ -50,7 +49,7 @@ new class extends Component {
                     $this->addError($field, $message);
                 }
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->addError('order', $e->getMessage() ?: 'Unable to create order.');
         }
     }
