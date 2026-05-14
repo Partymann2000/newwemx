@@ -9,6 +9,7 @@ use App\Models\Package;
 use App\Models\PackagePrice;
 use Livewire\Attributes\Url;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 new class extends Component {
     #[Url]
@@ -30,16 +31,28 @@ new class extends Component {
 
     public function createOrder()
     {
-        $order = Order::actions()->createOrderAsAdmin([
-            'user_id' => $this->user_id,
-            'package_price_id' => $this->package_price_id,
-            'due_date' => $this->due_date,
-            'create_server_instance' => $this->create_server_instance,
-            'email_order_confirmation' => $this->email_order_confirmation,
-            'config_options' => $this->config_options,
-        ]);
+        $this->resetErrorBag();
 
-        $this->redirect(route('admin.orders.edit', ['order' => $order->id]), true);
+        try {
+            $order = Order::actions()->createOrderAsAdmin([
+                'user_id' => $this->user_id,
+                'package_price_id' => $this->package_price_id,
+                'due_date' => $this->due_date,
+                'create_server_instance' => $this->create_server_instance,
+                'email_order_confirmation' => $this->email_order_confirmation,
+                'config_options' => $this->config_options,
+            ]);
+
+            $this->redirect(route('admin.orders.edit', ['order' => $order->id]), true);
+        } catch (ValidationException $e) {
+            foreach ($e->errors() as $field => $messages) {
+                foreach ((array) $messages as $message) {
+                    $this->addError($field, $message);
+                }
+            }
+        } catch (Throwable $e) {
+            $this->addError('order', $e->getMessage() ?: 'Unable to create order.');
+        }
     }
 
     public function updated()
@@ -96,6 +109,16 @@ new class extends Component {
         <h3 class="card-title">Create Order</h3>
     </div>
     <div class="card-body">
+        @if ($errors->any())
+            <x-admin::alerts.danger title="Unable to create order">
+                <ul class="mb-0">
+                    @foreach ($errors->all() as $error)
+                        <li>{{ $error }}</li>
+                    @endforeach
+                </ul>
+            </x-admin::alerts.danger>
+        @endif
+
         <div class="mb-3 row">
             <label class="col-3 col-form-label" for="user-input">{{ __('messages.user') }}</label>
             <div class="col" wire:ignore>
