@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\PasswordResetToken;
 use App\Models\User;
+use App\Rules\NotReservedUsername;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -46,7 +47,7 @@ class AuthActions extends Action
         $validatedData = Validator::make($input, [
             'first_name' => ['required', 'alpha', 'min:3', 'max:255'],
             'last_name' => ['required', 'alpha', 'min:3', 'max:255'],
-            'username' => ['required', 'alpha_num', 'min:5', 'max:255', 'unique:users,username'],
+            'username' => ['required', 'alpha_num', 'min:5', 'max:255', 'unique:users,username', new NotReservedUsername],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
             'password_confirmation' => ['required', 'string'],
