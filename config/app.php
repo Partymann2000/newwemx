@@ -23,7 +23,7 @@ return [
 
     'installed' => env('APP_INSTALLED', false),
 
-    'version' => env('APP_VERSION', 'alpha'),
+    'version' => env('APP_VERSION', 'v3-alpha'),
 
     'force_https' => env('FORCE_HTTPS', false),
 
