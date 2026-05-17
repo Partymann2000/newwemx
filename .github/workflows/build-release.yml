@@ -46,6 +46,13 @@ jobs:
           php artisan view:clear
           php artisan event:clear || true
 
+      - name: Write app version to config/app.php
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+
+          sed -i "s/^    'version' => '.*',/    'version' => '${VERSION}',/" config/app.php
+
       - name: Prepare release folder
         run: |
           mkdir -p build/wemx
@@ -67,17 +74,6 @@ jobs:
             --exclude="boost.json" \
             --exclude="build" \
             ./ build/wemx/
-
-      - name: Write app version to .env.example
-        run: |
-          VERSION="${{ github.event.release.tag_name }}"
-          VERSION="${VERSION#v}"
-
-          if grep -q "^APP_VERSION=" .env.example; then
-            sed -i "s/^APP_VERSION=.*/APP_VERSION=\"${VERSION}\"/" .env.example
-          else
-            echo "APP_VERSION=\"${VERSION}\"" >> .env.example
-          fi
 
       - name: Create ZIP archive
         run: |
