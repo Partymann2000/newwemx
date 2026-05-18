@@ -20,6 +20,7 @@ class Currency extends Model
     protected $fillable = [
         'currency',
         'display_name',
+        'format',
         'market_rate',
         'manual_rate',
         'previous_rate',

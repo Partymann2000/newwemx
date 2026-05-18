@@ -2,12 +2,17 @@
 
 namespace App\Rules;
 
+use App\Models\User;
 use Illuminate\Contracts\Validation\Rule;
 
 class NotReservedUsername implements Rule
 {
     public function passes($attribute, $value): bool
     {
+        if (User::query()->count() <= 1) {
+            return true;
+        }
+
         if (! filter_var(settings('block_reserved_usernames', true), FILTER_VALIDATE_BOOLEAN)) {
             return true;
         }
