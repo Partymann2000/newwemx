@@ -39,7 +39,11 @@ new class extends Component
 
 
 <div>
-    <x-theme::text.h5 class="mb-6">Account Details</x-theme::text.h5>
+    <x-theme::text.h5 class="mb-6">Create an account</x-theme::text.h5>
+
+    @foreach(extensionElements(['client-register-top-view']) as $element)
+        @includeIf($element['view'])
+    @endforeach
 
     <form wire:submit="handleRegistration">
         <div class="my-2 grid gap-5 sm:grid-cols-2">
@@ -95,6 +99,11 @@ new class extends Component
             </div>
         </div>
         <x-theme::button.primary type="submit" text="Next: Email Verification" class="w-full justify-content-center mb-4"/>
+
+        @foreach(extensionElements(['client-register-bottom-view']) as $element)
+            @includeIf($element['view'])
+        @endforeach
+
         <x-theme::text.p class="text-sm">Already have an account?
             <x-theme::text.link href="{{ route('login') }}" wire:navigate>Sign In</x-theme::text.link>
         </x-theme::text.p>

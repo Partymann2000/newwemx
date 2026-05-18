@@ -30,7 +30,7 @@ return new class extends Migration
                 'display_name' => $currency['name'],
                 'format' => $currency['format'],
                 'market_rate' => $currency['default_rate'] ?? 1,
-                'is_active' => $currency['is_active'] ?? true,
+                'is_active' => $currency['is_active'] ?? false,
                 'sort_order' => 0,
                 'created_at' => now(),
                 'updated_at' => now(),

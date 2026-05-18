@@ -31,6 +31,10 @@ new class extends Component
 <form class="w-full max-w-md space-y-4 md:space-y-6 xl:max-w-xl" wire:submit="handleLogin">
     <x-theme::text.h5>Welcome back</x-theme::text.h5>
 
+    @foreach(extensionElements(['client-login-top-view']) as $element)
+        @includeIf($element['view'])
+    @endforeach
+
     <div class="mb-4">
         <x-theme::form.label for="username" text="Email or username"/>
         <x-theme::form.input type="text" placeholder="Email or username" wire:model="username" id="username" autocomplete="username"/>
@@ -52,6 +56,11 @@ new class extends Component
         <x-theme::text.link text="Forgot Password?" class="text-sm" wire:navigate href="{{ route('forgot-password') }}"/>
     </div>
     <x-theme::button.primary type="submit" text="Sign in to your account" class="w-full justify-content-center"/>
+
+    @foreach(extensionElements(['client-login-bottom-view']) as $element)
+        @includeIf($element['view'])
+    @endforeach
+
     @if(settings('enable_registrations', true))
         <x-theme::text.p class="text-sm">Don't have an account?
             <x-theme::text.link href="{{ route('register') }}" wire:navigate>Sign Up</x-theme::text.link>
