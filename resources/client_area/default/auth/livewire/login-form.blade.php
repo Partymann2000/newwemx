@@ -5,7 +5,7 @@ use App\Models\User;
 
 new class extends Component
 {
-    public $email = '';
+    public $username = '';
 
     public $password = '';
 
@@ -16,7 +16,7 @@ new class extends Component
         $this->resetErrorBag();
 
         User::authActions()->loginAsClient([
-            'email' => $this->email,
+            'username' => $this->username,
             'password' => $this->password,
             'remember' => $this->remember,
         ]);
@@ -32,9 +32,9 @@ new class extends Component
     <x-theme::text.h5>Welcome back</x-theme::text.h5>
 
     <div class="mb-4">
-        <x-theme::form.label for="email" text="Email"/>
-        <x-theme::form.input type="email" placeholder="Email" wire:model="email" id="email"/>
-        @error('email')
+        <x-theme::form.label for="username" text="Email or username"/>
+        <x-theme::form.input type="text" placeholder="Email or username" wire:model="username" id="username" autocomplete="username"/>
+        @error('username')
         <x-theme::form.error :text="$message"/>
         @enderror
     </div>

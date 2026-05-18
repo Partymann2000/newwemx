@@ -17,12 +17,14 @@ class AuthActions extends Action
     public function loginAsClient(array $input): void
     {
         $validatedData = Validator::make($input, [
-            'email' => ['required', 'email'],
+            'username' => ['required', 'string', 'max:255'],
             'password' => ['required', 'min:5', 'max:255'],
             'remember' => ['nullable', 'boolean'],
         ])->validate();
 
-        if (Auth::attempt(['email' => $validatedData['email'], 'password' => $validatedData['password']], $validatedData['remember'] ?? false)) {
+        $authField = filter_var($validatedData['username'], FILTER_VALIDATE_EMAIL) ? 'email' : 'username';
+
+        if (Auth::attempt([$authField => $validatedData['username'], 'password' => $validatedData['password']], $validatedData['remember'] ?? false)) {
             // notify user on their previous email address
             auth()->user()->email([
                 'identifier' => 'account.new-login',
@@ -37,7 +39,7 @@ class AuthActions extends Action
             return;
         } else {
             throw ValidationException::withMessages([
-                'password' => 'Email or password is incorrect',
+                'username' => 'Email, username or password is incorrect.',
             ]);
         }
     }
