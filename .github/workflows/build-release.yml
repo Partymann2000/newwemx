@@ -54,7 +54,7 @@ jobs:
 
       - name: Prepare release folder
         run: |
-          mkdir -p build/wemx
+          mkdir -p build/staging
 
           rsync -av \
             --exclude=".git" \
@@ -72,12 +72,12 @@ jobs:
             --exclude="AGENTS.md" \
             --exclude="boost.json" \
             --exclude="/build" \
-            ./ build/wemx/
+            ./ build/staging/
 
       - name: Create ZIP archive
         run: |
-          cd build
-          zip -r WemX-${{ github.event.release.tag_name }}.zip wemx
+          cd build/staging
+          zip -r ../WemX-${{ github.event.release.tag_name }}.zip .
 
       - name: Upload ZIP to GitHub Release
         uses: softprops/action-gh-release@v2
