@@ -72,7 +72,7 @@ jobs:
             --exclude="phpunit.xml" \
             --exclude="AGENTS.md" \
             --exclude="boost.json" \
-            --exclude="build" \
+            --exclude="/build" \
             ./ build/wemx/
 
       - name: Create ZIP archive
