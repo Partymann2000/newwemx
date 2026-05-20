@@ -124,3 +124,7 @@ Route::group(['prefix' => 'schedule-logs'], function () {
     Route::get('/', [Admin\ScheduleLogController::class, 'index'])->name('schedule-logs.index');
     Route::get('/view/{log}', [Admin\ScheduleLogController::class, 'view'])->name('schedule-logs.view');
 });
+
+Route::view('/updates', 'admin::updates.index')
+    ->name('updates.index')
+    ->middleware('permission:admin.settings.index');
