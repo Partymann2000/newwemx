@@ -436,7 +436,7 @@ new class extends Component
 
                 <div class="modal-body py-5" x-show="installing" x-cloak>
                     <div class="text-center">
-                        <div class="text-secondary mb-3">Preparing application</div>
+                        <div class="text-secondary mb-3">Installing Update</div>
                         <div class="progress progress-sm">
                             <div class="progress-bar progress-bar-indeterminate"></div>
                         </div>
