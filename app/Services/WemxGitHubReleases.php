@@ -14,7 +14,7 @@ class WemxGitHubReleases
 
     public const RELEASES_PAGE_URL = 'https://github.com/'.self::REPOSITORY.'/releases';
 
-    public const CACHE_KEY = 'wemx.github.releases';
+    public const CACHE_KEY = 'wemx.github.releases.v2';
 
     public const CACHE_TTL_SECONDS = 3600;
 
@@ -29,6 +29,7 @@ class WemxGitHubReleases
     {
         if ($forceRefresh) {
             Cache::forget(self::CACHE_KEY);
+            Cache::forget('wemx.github.releases');
         }
 
         return Cache::remember(self::CACHE_KEY, self::CACHE_TTL_SECONDS, function (): array {
@@ -44,7 +45,7 @@ class WemxGitHubReleases
             if (! $response->successful()) {
                 return [
                     'releases' => [],
-                    'error' => 'Unable to load releases from GitHub. Please try again later.',
+                    'error' => $this->resolveFetchErrorMessage($response->status(), $response->header('X-RateLimit-Remaining'), $response->header('X-RateLimit-Reset')),
                     'fetched_at' => null,
                 ];
             }
@@ -56,11 +57,27 @@ class WemxGitHubReleases
                 ->all();
 
             return [
-                'releases' => $releases,
+                'releases' => $this->enrichReleases($releases),
                 'error' => null,
                 'fetched_at' => now()->toIso8601String(),
             ];
         });
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $releases
+     * @return list<array<string, mixed>>
+     */
+    public function enrichReleases(array $releases): array
+    {
+        return array_map(function (array $release): array {
+            $appBuildAsset = $this->primaryAppBuildAsset($release);
+
+            $release['app_build_asset'] = $appBuildAsset;
+            $release['has_app_build'] = $appBuildAsset !== null;
+
+            return $release;
+        }, $releases);
     }
 
     /**
@@ -144,8 +161,96 @@ class WemxGitHubReleases
     }
 
     /**
+     * @param  list<array<string, mixed>>  $releases
+     */
+    public function findReleaseById(array $releases, int $releaseId): ?array
+    {
+        foreach ($releases as $release) {
+            if ((int) ($release['id'] ?? 0) === $releaseId) {
+                return $release;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * @param  array<string, mixed>  $release
-     * @return array<string, mixed>
+     * @return array<string, mixed>|null
+     */
+    public function primaryAppBuildAsset(array $release): ?array
+    {
+        $assets = $release['assets'] ?? [];
+
+        if (! is_array($assets)) {
+            return null;
+        }
+
+        $tagName = (string) ($release['tag_name'] ?? '');
+
+        foreach ($assets as $asset) {
+            if (! is_array($asset)) {
+                continue;
+            }
+
+            $name = (string) ($asset['name'] ?? '');
+
+            if ($name !== '' && preg_match('/^WemX-.+\.zip$/i', $name) === 1) {
+                return $asset;
+            }
+        }
+
+        foreach ($assets as $asset) {
+            if (! is_array($asset)) {
+                continue;
+            }
+
+            $name = (string) ($asset['name'] ?? '');
+
+            if ($tagName !== '' && $name === "WemX-{$tagName}.zip") {
+                return $asset;
+            }
+        }
+
+        foreach ($assets as $asset) {
+            if (! is_array($asset)) {
+                continue;
+            }
+
+            $name = (string) ($asset['name'] ?? '');
+
+            if (str_ends_with(strtolower($name), '.zip')) {
+                return $asset;
+            }
+        }
+
+        return null;
+    }
+
+    protected function resolveFetchErrorMessage(int $status, ?string $rateLimitRemaining, ?string $rateLimitReset): string
+    {
+        if ($status === 403 && $rateLimitRemaining === '0') {
+            $retryAt = is_numeric($rateLimitReset)
+                ? Carbon::createFromTimestamp((int) $rateLimitReset)->diffForHumans()
+                : 'later';
+
+            return "GitHub API rate limit exceeded. Unauthenticated requests are limited to 60 per hour. Try again {$retryAt}, or click Refresh after the limit resets.";
+        }
+
+        if ($status === 403) {
+            return 'GitHub denied access to release data (HTTP 403). Check repository visibility and API rate limits.';
+        }
+
+        if ($status === 404) {
+            return 'GitHub repository or releases endpoint was not found (HTTP 404).';
+        }
+
+        return 'Unable to load releases from GitHub (HTTP '.$status.'). Please try again later.';
+    }
+
+    /**
+     * @param  array<string, mixed>  $release
+     * @return array<string, mixed>|null
      */
     protected function mapRelease(array $release): array
     {
@@ -156,6 +261,7 @@ class WemxGitHubReleases
         $assets = collect($release['assets'] ?? [])
             ->filter(fn (mixed $asset): bool => is_array($asset))
             ->map(fn (array $asset): array => [
+                'id' => (int) ($asset['id'] ?? 0),
                 'name' => (string) ($asset['name'] ?? ''),
                 'size' => (int) ($asset['size'] ?? 0),
                 'download_count' => (int) ($asset['download_count'] ?? 0),
@@ -164,6 +270,11 @@ class WemxGitHubReleases
             ])
             ->values()
             ->all();
+
+        $appBuildAsset = $this->primaryAppBuildAsset([
+            'tag_name' => (string) ($release['tag_name'] ?? ''),
+            'assets' => $assets,
+        ]);
 
         return [
             'id' => (int) ($release['id'] ?? 0),
@@ -178,6 +289,8 @@ class WemxGitHubReleases
             'author_login' => (string) data_get($release, 'author.login', ''),
             'author_avatar_url' => (string) data_get($release, 'author.avatar_url', ''),
             'assets' => $assets,
+            'app_build_asset' => $appBuildAsset,
+            'has_app_build' => $appBuildAsset !== null,
             'zipball_url' => (string) ($release['zipball_url'] ?? ''),
             'tarball_url' => (string) ($release['tarball_url'] ?? ''),
         ];

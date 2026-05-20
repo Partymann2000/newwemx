@@ -15,5 +15,5 @@
 @endsection
 
 @section('content')
-    @livewire(admin_view_path('updates.livewire.releases-timeline'), ['lazy' => true])
+    @livewire(admin_view_path('updates.livewire.releases-timeline'))
 @endsection

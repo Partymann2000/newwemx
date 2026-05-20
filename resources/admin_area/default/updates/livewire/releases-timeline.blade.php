@@ -1,7 +1,9 @@
 <?php
 
 use App\Services\WemxGitHubReleases;
+use App\Services\WemxReleaseInstaller;
 use Illuminate\Support\Str;
+use Livewire\Attributes\On;
 use Livewire\Volt\Component;
 
 new class extends Component
@@ -10,11 +12,19 @@ new class extends Component
 
     public ?string $fetchedAt = null;
 
+    public ?string $installStatus = null;
+
+    public ?int $installingReleaseId = null;
+
     /** @var list<array<string, mixed>> */
     public array $releases = [];
 
     /** @var array<string, mixed> */
     public array $status = [];
+
+    public bool $understandsInstallRisks = false;
+
+    public ?int $selectedReleaseId = null;
 
     public function placeholder()
     {
@@ -32,14 +42,110 @@ new class extends Component
         $this->dispatch('alert', 'success', 'Release data refreshed from GitHub.');
     }
 
+    public function openInstallModal(int $releaseId): void
+    {
+        $release = app(WemxGitHubReleases::class)->findReleaseById($this->releases, $releaseId);
+
+        if ($release === null) {
+            return;
+        }
+
+        $this->selectedReleaseId = $releaseId;
+        $this->understandsInstallRisks = false;
+        $this->resetErrorBag();
+
+        $this->dispatch(
+            'show-install-release-modal',
+            tag: (string) ($release['tag_name'] ?? ''),
+            build: (string) ($release['app_build_asset']['name'] ?? 'WemX build'),
+            prerelease: (bool) ($release['prerelease'] ?? false),
+        );
+    }
+
+    public function closeInstallModal(): void
+    {
+        $this->resetInstallModalState();
+        $this->dispatch('close-install-release-modal');
+    }
+
+    #[On('install-release-modal-closed')]
+    public function resetInstallModalState(): void
+    {
+        $this->selectedReleaseId = null;
+        $this->understandsInstallRisks = false;
+    }
+
+    public function confirmInstallRelease(
+        bool $understandsRisks,
+        WemxGitHubReleases $githubReleases,
+        WemxReleaseInstaller $installer,
+    ): void {
+        $this->understandsInstallRisks = $understandsRisks;
+
+        if (! $understandsRisks) {
+            $this->dispatch('install-release-failed', message: 'Please confirm you understand the risks before installing.');
+
+            return;
+        }
+
+        if ($this->selectedReleaseId === null) {
+            $this->addError('install', 'No release selected. Close the dialog and try again.');
+
+            return;
+        }
+
+        $this->installRelease($this->selectedReleaseId, $githubReleases, $installer);
+
+        if (! $this->getErrorBag()->has('install')) {
+            $this->closeInstallModal();
+        }
+    }
+
+    public function installRelease(
+        int $releaseId,
+        WemxGitHubReleases $githubReleases,
+        WemxReleaseInstaller $installer,
+    ): void {
+        $this->installStatus = null;
+        $this->installingReleaseId = $releaseId;
+
+        $release = $githubReleases->findReleaseById($this->releases, $releaseId);
+
+        if ($release === null) {
+            $this->dispatch('install-release-failed', message: 'Release not found. Refresh the page and try again.');
+            $this->installingReleaseId = null;
+
+            return;
+        }
+
+        $result = $installer->install($release);
+
+        $this->installingReleaseId = null;
+
+        if (! $result['success']) {
+            $this->dispatch('install-release-failed', message: $result['message']);
+
+            return;
+        }
+
+        $this->installStatus = $result['message'];
+        $this->loadReleases($githubReleases, forceRefresh: true);
+        $this->dispatch('alert', 'success', $result['message']);
+    }
+
     protected function loadReleases(WemxGitHubReleases $githubReleases, bool $forceRefresh = false): void
     {
         $payload = $githubReleases->getPayload($forceRefresh);
 
         $this->loadError = $payload['error'];
         $this->fetchedAt = $payload['fetched_at'];
-        $this->releases = $payload['releases'];
+        $this->releases = $githubReleases->enrichReleases($payload['releases']);
         $this->status = $githubReleases->buildStatus($this->releases);
+    }
+
+    public function canInstallRelease(array $release): bool
+    {
+        return app(WemxGitHubReleases::class)->primaryAppBuildAsset($release) !== null;
     }
 
     public function isInstalledRelease(array $release): bool
@@ -127,6 +233,12 @@ new class extends Component
                 :title="__('Pre-release version') . ' (' . ($status['installed_version'] ?? '') . ')'"
                 :message="__('You are running an alpha or beta channel build. Production deployments should use a stable tagged release.')"
             />
+        </div>
+    @endif
+
+    @if ($installStatus)
+        <div class="mb-3">
+            <x-admin::alerts.info title="Installation complete" :message="$installStatus"/>
         </div>
     @endif
 
@@ -251,34 +363,27 @@ new class extends Component
                                     @endif
                                 </div>
 
-                                @if (! empty($release['assets']))
-                                    <div class="mb-3">
-                                        <div class="text-secondary small mb-1">Downloads</div>
-                                        <div class="d-flex flex-wrap gap-2">
-                                            @foreach ($release['assets'] as $asset)
-                                                <a
-                                                    href="{{ $asset['browser_download_url'] }}"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    class="btn btn-sm btn-outline-secondary"
-                                                >
-                                                    {{ $asset['name'] }}
-                                                    <span class="text-secondary ms-1">({{ $this->formatAssetSize((int) $asset['size']) }})</span>
-                                                </a>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endif
-
-                                <div class="d-flex flex-wrap gap-2">
-                                    @if (! empty($release['html_url']))
-                                        <a href="{{ $release['html_url'] }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary">
-                                            View on GitHub
-                                        </a>
+                                <div class="d-flex flex-wrap gap-2 align-items-center">
+                                    @if ($this->canInstallRelease($release))
+                                        @if ($this->isInstalledRelease($release))
+                                            <button type="button" class="btn btn-sm btn-success" disabled>
+                                                Installed
+                                            </button>
+                                        @else
+                                            <button
+                                                type="button"
+                                                class="btn btn btn-primary"
+                                                wire:click="openInstallModal({{ (int) $release['id'] }})"
+                                            >
+                                                Install version {{ $release['tag_name'] }}
+                                            </button>
+                                        @endif
+                                    @else
+                                        <span class="text-secondary small">No in-app installable build for this release.</span>
                                     @endif
-                                    @if (! empty($release['zipball_url']))
-                                        <a href="{{ $release['zipball_url'] }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-secondary">
-                                            Source (zip)
+                                    @if (! empty($release['html_url']))
+                                        <a href="{{ $release['html_url'] }}" target="_blank" rel="noopener noreferrer" class="btn btn btn-outline-secondary">
+                                            View on GitHub
                                         </a>
                                     @endif
                                 </div>
@@ -297,4 +402,141 @@ new class extends Component
             </ul>
         </div>
     </div>
+
+    <div
+        class="modal modal-blur fade"
+        id="installReleaseModal"
+        tabindex="-1"
+        aria-hidden="true"
+        wire:ignore.self
+        x-data="{
+            tag: '',
+            build: '',
+            prerelease: false,
+            understands: false,
+            error: '',
+            installing: false,
+        }"
+    >
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title mb-1">Install release</h5>
+                        <div class="text-secondary" x-text="tag"></div>
+                    </div>
+                    <button type="button" class="btn-close" @click="$wire.closeInstallModal()" aria-label="Close"></button>
+                </div>
+                <div class="modal-body pt-2" id="installReleaseModalBody">
+                    <p class="text-secondary mb-3">
+                        Downloads <code x-text="build"></code> and applies it to your project root.
+                        <span x-show="prerelease" class="badge bg-orange-lt ms-1">Pre-release</span>
+                    </p>
+                    <div class="row g-2 text-secondary small">
+                        <div class="col-sm-6">
+                            <div class="border rounded-3 p-3 h-100 bg-secondary-lt">
+                                <div class="fw-semibold text-body mb-2">Will update</div>
+                                <ul class="mb-0 ps-3">
+                                    <li>Application code &amp; assets</li>
+                                    <li>Vendor &amp; config from the build</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="border rounded-3 p-3 h-100">
+                                <div class="fw-semibold text-body mb-2">Will not touch</div>
+                                <ul class="mb-0 ps-3">
+                                    <li><code>.env</code></li>
+                                    <li><code>storage/</code></li>
+                                    <li><code>database/database.sqlite</code></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-secondary small mt-3 mb-0">
+                        Back up your site first. Keep this tab open during install. Run migrations afterward if the release requires them.
+                    </p>
+                    <p class="text-danger small mt-2 mb-0" x-show="error" x-text="error"></p>
+                </div>
+                <div class="modal-footer border-0 pt-0 flex-column align-items-stretch">
+                    <label class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" x-model="understands">
+                        <span class="form-check-label text-secondary">
+                            I have a backup and understand this will overwrite application files in the project root.
+                        </span>
+                    </label>
+                    <div class="d-flex w-100 gap-2">
+                        <button type="button" class="btn me-auto" @click="$wire.closeInstallModal()">Cancel</button>
+                        <button
+                            type="button"
+                            class="btn btn-primary"
+                            :disabled="!understands || installing"
+                            @click="
+                                error = '';
+                                installing = true;
+                                $wire.confirmInstallRelease(understands).finally(() => installing = false);
+                            "
+                        >
+                            <span x-show="!installing">Install now</span>
+                            <span x-show="installing">Installing…</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @once
+        <script>
+            function wemxBindInstallReleaseModal() {
+                const modalElement = document.getElementById('installReleaseModal');
+
+                if (!modalElement || modalElement.dataset.wemxBound === '1') {
+                    return;
+                }
+
+                modalElement.dataset.wemxBound = '1';
+
+                const modal = () => bootstrap.Modal.getOrCreateInstance(modalElement);
+                const alpine = () => Alpine.$data(modalElement);
+
+                Livewire.on('show-install-release-modal', (payload) => {
+                    const data = Array.isArray(payload) ? (payload[0] ?? {}) : (payload ?? {});
+                    const state = alpine();
+
+                    if (state) {
+                        state.tag = data.tag ?? '';
+                        state.build = data.build ?? '';
+                        state.prerelease = Boolean(data.prerelease);
+                        state.understands = false;
+                        state.error = '';
+                        state.installing = false;
+                    }
+
+                    modal().show();
+                });
+
+                Livewire.on('close-install-release-modal', () => {
+                    modal().hide();
+                });
+
+                Livewire.on('install-release-failed', (payload) => {
+                    const data = Array.isArray(payload) ? (payload[0] ?? {}) : (payload ?? {});
+                    const state = alpine();
+
+                    if (state) {
+                        state.error = data.message ?? 'Installation failed.';
+                        state.installing = false;
+                    }
+                });
+
+                modalElement.addEventListener('hidden.bs.modal', () => {
+                    Livewire.dispatch('install-release-modal-closed');
+                });
+            }
+
+            document.addEventListener('livewire:init', wemxBindInstallReleaseModal);
+            document.addEventListener('livewire:navigated', wemxBindInstallReleaseModal);
+        </script>
+    @endonce
 </div>
