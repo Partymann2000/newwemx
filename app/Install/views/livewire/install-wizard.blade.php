@@ -54,7 +54,7 @@
                         <li class="step-item @if($step == 'activation') active @endif">
                             <div class="h4 m-0">License Activation</div>
                             <div class="text-secondary">
-                                Enter your license key to activate the application. If you don't have a license, you can purchase one from our website.
+                                Enter your license key to activate the application. You can obtain a license key at <a href="https://app.wemx.net" target="_blank" rel="noopener noreferrer">app.wemx.net</a>.
                             </div>
                         </li>
                         <li class="step-item @if($step == 'database') active @endif">
@@ -231,7 +231,7 @@
                         <div class="text-center">
                             <h1>Activate License Key</h1>
                             <p class="text-secondary">
-                                Please enter your license key to activate the application. If you don't have a license, you can purchase one from our website.
+                                Please enter your license key to activate the application. You can obtain a license key at <a href="https://app.wemx.net" target="_blank" rel="noopener noreferrer">app.wemx.net</a>.
                             </p>
                         </div>
                     </div>
@@ -257,7 +257,7 @@
                             </div>
                             @else
                             <div class="form-hint">
-                                Enter your license key to activate the application. If you don't have a license, you can purchase one from our website <a href="https://wemx.net" target="_blank">wemx.net</a>.
+                                Enter your license key to activate the application. You can obtain a license key at <a href="https://app.wemx.net" target="_blank" rel="noopener noreferrer">app.wemx.net</a>.
                             </div>
                             @enderror
                             <div class="mt-2">
