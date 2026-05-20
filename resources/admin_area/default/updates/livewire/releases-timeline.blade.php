@@ -64,6 +64,10 @@ new class extends Component
 
     public function closeInstallModal(): void
     {
+        if ($this->installingReleaseId !== null) {
+            return;
+        }
+
         $this->resetInstallModalState();
         $this->dispatch('close-install-release-modal');
     }
@@ -96,7 +100,7 @@ new class extends Component
 
         $this->installRelease($this->selectedReleaseId, $githubReleases, $installer);
 
-        if (! $this->getErrorBag()->has('install')) {
+        if ($this->installingReleaseId === null && $this->installStatus !== null) {
             $this->closeInstallModal();
         }
     }
@@ -408,6 +412,8 @@ new class extends Component
         id="installReleaseModal"
         tabindex="-1"
         aria-hidden="true"
+        data-bs-backdrop="static"
+        data-bs-keyboard="false"
         wire:ignore.self
         x-data="{
             tag: '',
@@ -420,14 +426,27 @@ new class extends Component
     >
         <div class="modal-dialog modal-dialog-centered" role="document">
             <div class="modal-content">
-                <div class="modal-header border-0 pb-0">
+                <div class="modal-header border-0 pb-0" x-show="!installing">
                     <div>
                         <h5 class="modal-title mb-1">Install release</h5>
                         <div class="text-secondary" x-text="tag"></div>
                     </div>
                     <button type="button" class="btn-close" @click="$wire.closeInstallModal()" aria-label="Close"></button>
                 </div>
-                <div class="modal-body pt-2" id="installReleaseModalBody">
+
+                <div class="modal-body py-5" x-show="installing" x-cloak>
+                    <div class="text-center">
+                        <div class="text-secondary mb-3">Preparing application</div>
+                        <div class="progress progress-sm">
+                            <div class="progress-bar progress-bar-indeterminate"></div>
+                        </div>
+                    </div>
+                    <p class="text-secondary small text-center mt-4 mb-0">
+                        Do not refresh or close this page until the update is finished. Installation can take up to a minute.
+                    </p>
+                </div>
+
+                <div class="modal-body pt-2" id="installReleaseModalBody" x-show="!installing">
                     <p class="text-secondary mb-3">
                         Downloads <code x-text="build"></code> and applies it to your project root.
                         <span x-show="prerelease" class="badge bg-orange-lt ms-1">Pre-release</span>
@@ -458,7 +477,7 @@ new class extends Component
                     </p>
                     <p class="text-danger small mt-2 mb-0" x-show="error" x-text="error"></p>
                 </div>
-                <div class="modal-footer border-0 pt-0 flex-column align-items-stretch">
+                <div class="modal-footer border-0 pt-0 flex-column align-items-stretch" x-show="!installing">
                     <label class="form-check mb-3">
                         <input class="form-check-input" type="checkbox" x-model="understands">
                         <span class="form-check-label text-secondary">
@@ -470,15 +489,14 @@ new class extends Component
                         <button
                             type="button"
                             class="btn btn-primary"
-                            :disabled="!understands || installing"
+                            :disabled="!understands"
                             @click="
                                 error = '';
                                 installing = true;
-                                $wire.confirmInstallRelease(understands).finally(() => installing = false);
+                                $wire.confirmInstallRelease(understands);
                             "
                         >
-                            <span x-show="!installing">Install now</span>
-                            <span x-show="installing">Installing…</span>
+                            Install now
                         </button>
                     </div>
                 </div>
@@ -497,7 +515,19 @@ new class extends Component
 
                 modalElement.dataset.wemxBound = '1';
 
-                const modal = () => bootstrap.Modal.getOrCreateInstance(modalElement);
+                let modalInstance = null;
+
+                const modal = () => {
+                    if (!modalInstance) {
+                        modalInstance = new bootstrap.Modal(modalElement, {
+                            backdrop: 'static',
+                            keyboard: false,
+                        });
+                    }
+
+                    return modalInstance;
+                };
+
                 const alpine = () => Alpine.$data(modalElement);
 
                 Livewire.on('show-install-release-modal', (payload) => {
@@ -531,6 +561,12 @@ new class extends Component
                 });
 
                 modalElement.addEventListener('hidden.bs.modal', () => {
+                    const state = alpine();
+
+                    if (state) {
+                        state.installing = false;
+                    }
+
                     Livewire.dispatch('install-release-modal-closed');
                 });
             }
