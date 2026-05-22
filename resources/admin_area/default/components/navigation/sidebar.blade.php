@@ -197,6 +197,7 @@
                 </x-admin::navigation.sidebar-item>
                 @endperm
 
+                <!--License -->
                 @perm('admin.settings.index')
                 <x-admin::navigation.sidebar-item
                     title="License"
@@ -208,6 +209,7 @@
                 </x-admin::navigation.sidebar-item>
                 @endperm
 
+                <!-- Updates -->
                 @perm('admin.settings.index')
                 <x-admin::navigation.sidebar-item
                     title="Updates"
@@ -219,6 +221,7 @@
                 </x-admin::navigation.sidebar-item>
                 @endperm
 
+                <!-- Pages -->
                 @perm('admin.pages.index')
                 <x-admin::navigation.sidebar-item
                     :title="__('messages.pages')"
@@ -250,6 +253,19 @@
                     :active="$activePage === 'taxes'">
                     <x-slot name="icon">
                         <x-admin::icon icon="tax" outline/>
+                    </x-slot>
+                </x-admin::navigation.sidebar-item>
+                @endperm
+
+                <!-- Images -->
+                @perm('admin.settings.index')
+                <x-admin::navigation.sidebar-item
+                    title="Images"
+                    :href="route('admin.images.index')"
+                    :active="$activePage === 'images'"
+                    :id="'settings-menu'">
+                    <x-slot name="icon">
+                        <x-admin::icon icon="photo" outline/>
                     </x-slot>
                 </x-admin::navigation.sidebar-item>
                 @endperm
