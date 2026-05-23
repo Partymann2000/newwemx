@@ -94,6 +94,11 @@ class User extends Authenticatable
         });
     }
 
+    public function isPrimaryAdmin(): bool
+    {
+        return $this->id === 1;
+    }
+
     /**
      * Get the user's full name.
      */

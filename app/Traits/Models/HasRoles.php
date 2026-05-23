@@ -3,9 +3,7 @@
 namespace App\Traits\Models;
 
 use App\Models\RoleUser;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Collection;
 
 /**
  * Trait HasRoles
@@ -25,18 +23,10 @@ trait HasRoles
      * Example logic:
      *   - If user ID is 1 (super admin), or
      *   - if the user is in at least one group with is_admin = true.
-     *
-     * @return bool
      */
     public function isAdmin(): bool
     {
-        // If you consider user with ID=1 as super admin:
-        if ($this->id === 1) {
-            return true;
-        }
-
-        // Otherwise, check if there's any admin group in the loaded collection
-        return false;
+        return $this->isPrimaryAdmin();
     }
 
     public function isStaff(): bool
@@ -53,7 +43,7 @@ trait HasRoles
     public function getAllPermissions()
     {
         $permissions = [];
-        foreach($this->roles as $role) {
+        foreach ($this->roles as $role) {
             $permissions[] = $role->role->getAllPermissions();
         }
 
@@ -64,9 +54,6 @@ trait HasRoles
      * Check if the user has a specific permission.
      * Assumes each group has a "permissions" relationship
      * with a "permission" attribute to compare against.
-     *
-     * @param string|array $permissions
-     * @return bool
      */
     public function hasPermission(string|array $permissions): bool
     {
@@ -84,7 +71,7 @@ trait HasRoles
 
         $userPermissions = $this->getAllPermissions();
         if (is_array($permissions)) {
-            return !empty(array_intersect($permissions, $userPermissions));
+            return ! empty(array_intersect($permissions, $userPermissions));
         } elseif (is_string($permissions)) {
             return in_array($permissions, $userPermissions);
         }

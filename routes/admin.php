@@ -125,6 +125,10 @@ Route::group(['prefix' => 'schedule-logs'], function () {
     Route::get('/view/{log}', [Admin\ScheduleLogController::class, 'view'])->name('schedule-logs.view');
 });
 
+Route::get('/updates/database-export', [Admin\UpdatesController::class, 'exportDatabase'])
+    ->name('updates.database-export')
+    ->middleware('permission:admin.settings.index');
+
 Route::view('/updates', 'admin::updates.index')
     ->name('updates.index')
     ->middleware('permission:admin.settings.index');
