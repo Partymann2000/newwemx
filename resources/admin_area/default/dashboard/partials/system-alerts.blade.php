@@ -1,3 +1,5 @@
+@include('admin::partials.update-available-alert')
+
 @php
     $showPrereleaseAlert = admin_is_prerelease_version();
     $showCronAlert = ! \App\Models\AppTaskLog::isSchedularRunning();

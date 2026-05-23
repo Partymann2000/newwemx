@@ -19,3 +19,6 @@ Schedule::command('cronjobs:report-active-check')->everyThreeHours()->withoutOve
 
 // Every five minutes
 Schedule::command('server-connections:test')->everyFiveMinutes();
+
+// Every thirty minutes
+Schedule::command('cronjobs:check-github-update')->everyThirtyMinutes()->withoutOverlapping();

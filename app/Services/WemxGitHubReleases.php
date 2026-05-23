@@ -16,7 +16,11 @@ class WemxGitHubReleases
 
     public const CACHE_KEY = 'wemx.github.releases.v2';
 
-    public const CACHE_TTL_SECONDS = 3600;
+    public const UPDATE_STATUS_CACHE_KEY = 'wemx.github.update_status';
+
+    public const CACHE_TTL_SECONDS = 1800;
+
+    public const UPDATE_STATUS_CACHE_TTL_SECONDS = 2100;
 
     /**
      * @return array{
@@ -86,6 +90,78 @@ class WemxGitHubReleases
     public function getReleases(bool $forceRefresh = false): array
     {
         return $this->getPayload($forceRefresh)['releases'];
+    }
+
+    /**
+     * Fetch releases from GitHub, compute update status, and store the result in cache.
+     *
+     * @return array{
+     *     installed_version: string,
+     *     latest_tag: string|null,
+     *     matched_release: array<string, mixed>|null,
+     *     update_available: bool,
+     *     is_prerelease_channel: bool,
+     *     error: string|null,
+     *     checked_at: string,
+     *     fetched_at: string|null
+     * }
+     */
+    public function refreshUpdateStatus(): array
+    {
+        $payload = $this->getPayload(forceRefresh: true);
+        $status = $this->buildStatus($payload['releases']);
+
+        $cached = array_merge($status, [
+            'error' => $payload['error'],
+            'checked_at' => now()->toIso8601String(),
+            'fetched_at' => $payload['fetched_at'],
+        ]);
+
+        Cache::put(self::UPDATE_STATUS_CACHE_KEY, $cached, self::UPDATE_STATUS_CACHE_TTL_SECONDS);
+
+        return $cached;
+    }
+
+    /**
+     * @return array{
+     *     installed_version: string,
+     *     latest_tag: string|null,
+     *     matched_release: array<string, mixed>|null,
+     *     update_available: bool,
+     *     is_prerelease_channel: bool,
+     *     error: string|null,
+     *     checked_at: string|null,
+     *     fetched_at: string|null
+     * }|null
+     */
+    public function getCachedUpdateStatus(): ?array
+    {
+        $cached = Cache::get(self::UPDATE_STATUS_CACHE_KEY);
+
+        if (is_array($cached)) {
+            return $cached;
+        }
+
+        $payload = Cache::get(self::CACHE_KEY);
+
+        if (! is_array($payload) || ($payload['error'] ?? null) !== null) {
+            return null;
+        }
+
+        return array_merge($this->buildStatus($payload['releases'] ?? []), [
+            'error' => null,
+            'checked_at' => $payload['fetched_at'] ?? null,
+            'fetched_at' => $payload['fetched_at'] ?? null,
+        ]);
+    }
+
+    public function hasUpdateAvailable(): bool
+    {
+        $status = $this->getCachedUpdateStatus();
+
+        return $status !== null
+            && ($status['error'] ?? null) === null
+            && ($status['update_available'] ?? false);
     }
 
     public function installedVersion(): string
