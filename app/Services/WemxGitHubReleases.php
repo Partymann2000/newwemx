@@ -251,6 +251,36 @@ class WemxGitHubReleases
     }
 
     /**
+     * @param  list<array<string, mixed>>  $releases
+     */
+    public function findReleaseByTag(array $releases, string $tag): ?array
+    {
+        $normalized = $this->normalizeVersion($tag);
+
+        foreach ($releases as $release) {
+            if ($this->normalizeVersion((string) ($release['tag_name'] ?? '')) === $normalized) {
+                return $release;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Releases that include a downloadable WemX application ZIP (required for in-place updates).
+     *
+     * @param  list<array<string, mixed>>  $releases
+     * @return list<array<string, mixed>>
+     */
+    public function releasesWithAppBuild(array $releases): array
+    {
+        return array_values(array_filter(
+            $releases,
+            fn (array $release): bool => ($release['has_app_build'] ?? false) === true,
+        ));
+    }
+
+    /**
      * @param  array<string, mixed>  $release
      * @return array<string, mixed>|null
      */
