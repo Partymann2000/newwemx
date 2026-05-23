@@ -18,6 +18,7 @@ class DefineCartMiddleware
         $userId = auth()->id();
 
         $cart = Cart::query()
+            ->with(['items.cartable.package'])
             ->where('session_id', $sessionId)
             ->when($userId, fn ($query) => $query->orWhere('user_id', $userId))
             ->first();
